@@ -6,6 +6,7 @@ No manual buttons needed.
 
 from flask import Flask, render_template, request, jsonify
 from kanban_db import KanbanBoard, Status, Priority
+from calendar_sync_google_oauth import GoogleCalendarSyncOAuth
 from calendar_sync_ical import iCalSync
 from calendar_sync_auto import AutoCalendarSync
 import json
@@ -25,13 +26,15 @@ boards = {
 }
 
 # Initialize calendar sync services
-# Using iCal for automatic sync (no auth required)
+google_sync = GoogleCalendarSyncOAuth(
+    scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu")
+)
 ical_sync = iCalSync()
 
-# Auto-sync service (syncs to iCal feeds)
+# Auto-sync service (syncs to both Google Calendar + iCal)
 auto_sync = AutoCalendarSync(
     outlook_sync=None,
-    google_sync=None,
+    google_sync=google_sync,
     apple_sync=None,
     ical_sync=ical_sync
 )
@@ -217,9 +220,10 @@ def sync_status():
     return jsonify({
         "auto_sync_enabled": auto_sync.sync_enabled,
         "calendars_syncing_to": [
-            "iCal (.ics files)" if ical_sync else None,
+            "Google Calendar (instant sync)" if google_sync else None,
+            "iCal (.ics feeds for subscriptions)" if ical_sync else None,
         ],
-        "message": "All tasks automatically export to iCal. Subscribe in Outlook/Google/Apple/Teams."
+        "message": "Tasks sync instantly to Google Calendar + iCal feeds for Outlook/Apple/Teams subscriptions."
     })
 
 @app.route("/api/<user>/calendar.ics", methods=["GET"])

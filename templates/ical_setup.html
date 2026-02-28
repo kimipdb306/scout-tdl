@@ -23,16 +23,29 @@
 </head>
 <body>
     <div class="container">
-        <h1>🗓️ Scout TDL - iCal Calendar Setup</h1>
-        <p class="subtitle">Your tasks automatically export to iCal feeds. Subscribe in your favorite calendar app.</p>
+        <h1>🗓️ Scout TDL - Calendar Setup</h1>
+        <p class="subtitle">Your tasks sync instantly to Google Calendar + iCal feeds.</p>
         
         <div class="info-box">
-            ✅ <strong>How it works:</strong> Scout TDL automatically updates iCal files every time you create, edit, or complete a task. Subscribe to the iCal feeds below in Outlook, Google Calendar, Apple Calendar, or Teams, and they'll auto-update.
+            ✅ <strong>How it works:</strong> Scout TDL automatically syncs to Google Calendar (instant) and exports iCal feeds (every 15 min) that you can subscribe to in Outlook, Apple Calendar, or Teams. Choose your setup below.
         </div>
 
-        <!-- Outlook / Microsoft 365 -->
+        <!-- Google Calendar (Recommended) -->
         <div class="setup-section">
-            <h2>📧 Outlook (Microsoft 365)</h2>
+            <h2>🚀 Google Calendar (Recommended - Instant Sync)</h2>
+            <ol class="steps">
+                <li>Create a task in Scout TDL with a due date</li>
+                <li>You'll see a one-time Google authentication prompt</li>
+                <li>Sign in with your Google account (jeffriesr27@darden.virginia.edu or dsn9zx@darden.virginia.edu)</li>
+                <li>Click "Allow" to grant Scout TDL access to your calendar</li>
+                <li>Done! All future tasks sync instantly to Google Calendar</li>
+            </ol>
+            <p style="margin-top: 15px; color: #0066cc;"><strong>✨ Tasks appear in Google Calendar within seconds of creation</strong></p>
+        </div>
+
+        <!-- Outlook / Microsoft 365 (via iCal) -->
+        <div class="setup-section">
+            <h2>📧 Outlook (via iCal Feed)</h2>
             <ol class="steps">
                 <li>Open <strong>Outlook</strong> (web or desktop)</li>
                 <li>Click <strong>"Add calendar"</strong> → <strong>"Subscribe from the internet"</strong></li>
@@ -40,8 +53,22 @@
                     <div class="code-block" id="outlook-url">https://kanban-board-ypy2.onrender.com/api/scout/calendar.ics</div>
                 </li>
                 <li>Click <strong>"Import"</strong></li>
-                <li>Your Scout TDL tasks appear in Outlook calendar</li>
+                <li>Scout TDL calendar appears in your sidebar (updates every ~15 minutes)</li>
             </ol>
+            <p style="margin-top: 10px; font-size: 13px; color: #666;"><em>Note: Updates are not instant (polling-based). For real-time sync, use Google Calendar method above.</em></p>
+        </div>
+
+        <!-- Outlook via Google Calendar (Best) -->
+        <div class="setup-section">
+            <h2>🔗 Outlook + Google Calendar (Instant - Recommended)</h2>
+            <ol class="steps">
+                <li><strong>First:</strong> Set up Google Calendar (see "Google Calendar" section above)</li>
+                <li>In Outlook, click <strong>"Add calendar"</strong> → <strong>"From the web"</strong></li>
+                <li>Paste your Google Calendar URL (you can find it in Google Calendar settings)</li>
+                <li>Click <strong>"Import"</strong></li>
+                <li>Scout TDL appears in Outlook with instant updates (synced through Google)</li>
+            </ol>
+            <p style="margin-top: 10px; font-size: 13px; color: #0066cc;"><strong>✨ This gives you real-time sync in Outlook + Teams</strong></p>
         </div>
 
         <!-- Google Calendar -->
@@ -97,12 +124,19 @@
 
         <!-- How Updates Work -->
         <div class="setup-section">
-            <h2>🔄 How Updates Work</h2>
+            <h2>⚡ How Updates Work</h2>
+            <h3 style="margin-top: 15px; color: #0066cc;">Google Calendar (Instant)</h3>
             <ul style="margin-left: 20px; line-height: 1.8;">
-                <li><strong>Create a task:</strong> Appears in your calendars within 1 minute</li>
-                <li><strong>Edit a task:</strong> Updates in your calendars within 1 minute</li>
-                <li><strong>Complete a task:</strong> Automatically removed from calendars</li>
-                <li><strong>Manual refresh:</strong> Most calendar apps check every 15 minutes</li>
+                <li><strong>Create a task:</strong> Appears in Google Calendar within seconds</li>
+                <li><strong>Edit a task:</strong> Updates in Google Calendar within seconds</li>
+                <li><strong>Complete a task:</strong> Automatically removed from Google Calendar</li>
+            </ul>
+            <h3 style="margin-top: 15px; color: #666;">iCal Feed (Polling-based)</h3>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Create a task:</strong> Appears in subscribed calendars within 1-15 minutes</li>
+                <li><strong>Edit a task:</strong> Updates in subscribed calendars within 1-15 minutes</li>
+                <li><strong>Complete a task:</strong> Removed from subscribed calendars within 1-15 minutes</li>
+                <li><strong>Manual refresh:</strong> Most calendar apps (Outlook, Apple) check every 15 minutes</li>
             </ul>
         </div>
 
