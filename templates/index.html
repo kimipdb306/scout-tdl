@@ -82,6 +82,7 @@
         <div class="action-bar">
             <button class="btn btn-primary" onclick="openNewItemModal()">+ New Item</button>
             <button class="btn btn-sync" onclick="syncCalendars()">📅 Sync Calendars</button>
+            <button class="btn btn-sync" onclick="connectOutlook()" id="outlook-btn">🔗 Connect Outlook</button>
             <button class="btn btn-secondary" id="board-btn" onclick="switchView('board')">Board</button>
             <button class="btn btn-secondary" id="history-btn" onclick="switchView('history')">📋 TDL History</button>
         </div>
@@ -299,6 +300,15 @@
             alert(data.message || data.error);
             btn.disabled = false;
             btn.textContent = '📅 Sync Calendars';
+        }
+
+        async function connectOutlook() {
+            const btn = document.getElementById('outlook-btn');
+            btn.disabled = true;
+            btn.textContent = 'Connecting...';
+            
+            // Redirect to Outlook OAuth
+            window.location.href = '/auth/outlook/login';
         }
 
         function switchView(view) {
