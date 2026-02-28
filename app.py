@@ -6,15 +6,13 @@ No manual buttons needed.
 
 from flask import Flask, render_template, request, jsonify
 from kanban_db import KanbanBoard, Status, Priority
-from calendar_sync_outlook import OutlookCalendarSync
-from calendar_sync_google_oauth import GoogleCalendarSyncOAuth
-from calendar_sync_apple import AppleCalendarSync
 from calendar_sync_ical import iCalSync
 from calendar_sync_auto import AutoCalendarSync
 import json
 from pathlib import Path
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+from icalendar import Calendar, Event
 
 _app_dir = Path(__file__).parent
 app = Flask(__name__, template_folder=str(_app_dir / "templates"), static_folder=str(_app_dir / "static"))
@@ -27,20 +25,14 @@ boards = {
 }
 
 # Initialize calendar sync services
-outlook_sync = OutlookCalendarSync(
-    scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu")
-)
-google_sync = GoogleCalendarSyncOAuth(
-    scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu")
-)
-apple_sync = AppleCalendarSync()
+# Using iCal for automatic sync (no auth required)
 ical_sync = iCalSync()
 
-# Auto-sync service (syncs to all calendars automatically)
+# Auto-sync service (syncs to iCal feeds)
 auto_sync = AutoCalendarSync(
-    outlook_sync=outlook_sync,
-    google_sync=google_sync,
-    apple_sync=apple_sync,
+    outlook_sync=None,
+    google_sync=None,
+    apple_sync=None,
     ical_sync=ical_sync
 )
 auto_sync.enable_auto_sync()
@@ -50,6 +42,11 @@ auto_sync.enable_auto_sync()
 def index():
     """Serve kanban board UI."""
     return render_template("index.html")
+
+@app.route("/setup")
+def setup():
+    """Serve iCal setup instructions."""
+    return render_template("ical_setup.html")
 
 # Multi-user API endpoints with AUTOMATIC SYNC
 @app.route("/api/<user>/items", methods=["GET"])
@@ -220,13 +217,47 @@ def sync_status():
     return jsonify({
         "auto_sync_enabled": auto_sync.sync_enabled,
         "calendars_syncing_to": [
-            "Outlook" if outlook_sync else None,
-            "Google Calendar" if google_sync else None,
-            "Apple Calendar" if apple_sync else None,
             "iCal (.ics files)" if ical_sync else None,
         ],
-        "message": "All tasks automatically sync to connected calendars. No manual action needed."
+        "message": "All tasks automatically export to iCal. Subscribe in Outlook/Google/Apple/Teams."
     })
+
+@app.route("/api/<user>/calendar.ics", methods=["GET"])
+def get_ical_feed(user):
+    """Serve iCal feed for subscription."""
+    board = boards.get(user)
+    if not board:
+        return jsonify({"error": "User not found"}), 404
+    
+    cal = Calendar()
+    cal.add('prodid', f'-//Scout TDL//{user.capitalize()}//EN')
+    cal.add('version', '2.0')
+    cal.add('x-wr-calname', f'Scout TDL - {user.capitalize()}')
+    cal.add('x-wr-timezone', 'America/New_York')
+    cal.add('method', 'PUBLISH')
+    cal.add('refresh-interval', 'PT15M')  # Refresh every 15 minutes
+    
+    # Add all non-completed tasks
+    for item in board.items:
+        if item.status != Status.DONE and item.due_date:
+            try:
+                due_date = datetime.fromisoformat(item.due_date)
+            except:
+                continue
+            
+            event = Event()
+            event.add('uid', f"{item.id}@scout-tdl")
+            event.add('dtstart', due_date.date())
+            event.add('dtend', (due_date + timedelta(days=1)).date())
+            event.add('summary', f"[{item.priority.name}] {item.title}")
+            event.add('description', f"Task ID: {item.id}\nStatus: {item.status.value}\nPriority: {item.priority.name}\n{item.description}")
+            event.add('categories', ['TDL', item.priority.name])
+            event.add('created', datetime.fromisoformat(item.created_at) if item.created_at else datetime.now())
+            event.add('last-modified', datetime.now())
+            
+            cal.add_component(event)
+    
+    return cal.to_ical(), 200, {'Content-Type': 'text/calendar'}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5555))

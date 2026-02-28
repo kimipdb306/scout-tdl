@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scout TDL - iCal Setup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { margin-bottom: 10px; color: #0066cc; }
+        .subtitle { color: #666; margin-bottom: 30px; font-size: 16px; }
+        .info-box { background: #e3f2fd; border-left: 4px solid #0066cc; padding: 15px; margin-bottom: 30px; border-radius: 4px; }
+        .setup-section { margin-bottom: 40px; }
+        .setup-section h2 { font-size: 18px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+        .steps { list-style: none; counter-reset: step-counter; }
+        .steps li { counter-increment: step-counter; margin-bottom: 15px; padding-left: 30px; position: relative; }
+        .steps li:before { content: counter(step-counter); position: absolute; left: 0; top: 0; background: #0066cc; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
+        .code-block { background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 12px; font-family: monospace; font-size: 13px; margin-top: 10px; overflow-x: auto; }
+        .button { display: inline-block; padding: 10px 20px; background: #0066cc; color: white; border-radius: 4px; text-decoration: none; margin-top: 10px; }
+        .button:hover { background: #0052a3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗓️ Scout TDL - iCal Calendar Setup</h1>
+        <p class="subtitle">Your tasks automatically export to iCal feeds. Subscribe in your favorite calendar app.</p>
+        
+        <div class="info-box">
+            ✅ <strong>How it works:</strong> Scout TDL automatically updates iCal files every time you create, edit, or complete a task. Subscribe to the iCal feeds below in Outlook, Google Calendar, Apple Calendar, or Teams, and they'll auto-update.
+        </div>
+
+        <!-- Outlook / Microsoft 365 -->
+        <div class="setup-section">
+            <h2>📧 Outlook (Microsoft 365)</h2>
+            <ol class="steps">
+                <li>Open <strong>Outlook</strong> (web or desktop)</li>
+                <li>Click <strong>"Add calendar"</strong> → <strong>"Subscribe from the internet"</strong></li>
+                <li>Paste your iCal URL:
+                    <div class="code-block" id="outlook-url">https://kanban-board-ypy2.onrender.com/api/scout/calendar.ics</div>
+                </li>
+                <li>Click <strong>"Import"</strong></li>
+                <li>Your Scout TDL tasks appear in Outlook calendar</li>
+            </ol>
+        </div>
+
+        <!-- Google Calendar -->
+        <div class="setup-section">
+            <h2>📅 Google Calendar</h2>
+            <ol class="steps">
+                <li>Go to <strong>calendar.google.com</strong></li>
+                <li>On the left, click <strong>"+"</strong> next to "Other calendars"</li>
+                <li>Select <strong>"Subscribe to calendar"</strong></li>
+                <li>Paste your iCal URL:
+                    <div class="code-block" id="google-url">https://kanban-board-ypy2.onrender.com/api/scout/calendar.ics</div>
+                </li>
+                <li>Click <strong>"Subscribe"</strong></li>
+                <li>Scout TDL appears as a calendar on the left</li>
+            </ol>
+        </div>
+
+        <!-- Apple Calendar / iCloud -->
+        <div class="setup-section">
+            <h2>🍎 Apple Calendar / iCloud</h2>
+            <ol class="steps">
+                <li>Open <strong>Calendar</strong> app on Mac</li>
+                <li>Click <strong>File</strong> → <strong>Subscribe to Calendar</strong></li>
+                <li>Paste your iCal URL:
+                    <div class="code-block" id="apple-url">https://kanban-board-ypy2.onrender.com/api/scout/calendar.ics</div>
+                </li>
+                <li>Click <strong>Subscribe</strong></li>
+                <li>Choose which calendar to add it to</li>
+                <li>Scout TDL tasks appear on your Mac and iPhone</li>
+            </ol>
+        </div>
+
+        <!-- Microsoft Teams -->
+        <div class="setup-section">
+            <h2>💬 Microsoft Teams</h2>
+            <ol class="steps">
+                <li>Open <strong>Outlook</strong> (Teams uses Outlook calendar)</li>
+                <li>Follow the <strong>Outlook</strong> instructions above to add the iCal feed</li>
+                <li>Your Scout TDL calendar syncs to Teams automatically</li>
+                <li>Tasks show in <strong>Calendar</strong> tab in Teams</li>
+            </ol>
+        </div>
+
+        <!-- Your iCal URLs -->
+        <div class="setup-section">
+            <h2>📋 Your iCal Feed URLs</h2>
+            <p>Use these exact URLs in your calendar apps:</p>
+            <p><strong>Scout's Tasks:</strong></p>
+            <div class="code-block">https://kanban-board-ypy2.onrender.com/api/scout/calendar.ics</div>
+            <p style="margin-top: 15px;"><strong>Reid's Tasks:</strong></p>
+            <div class="code-block">https://kanban-board-ypy2.onrender.com/api/reid/calendar.ics</div>
+        </div>
+
+        <!-- How Updates Work -->
+        <div class="setup-section">
+            <h2>🔄 How Updates Work</h2>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Create a task:</strong> Appears in your calendars within 1 minute</li>
+                <li><strong>Edit a task:</strong> Updates in your calendars within 1 minute</li>
+                <li><strong>Complete a task:</strong> Automatically removed from calendars</li>
+                <li><strong>Manual refresh:</strong> Most calendar apps check every 15 minutes</li>
+            </ul>
+        </div>
+
+        <!-- Back to TDL -->
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f0f0f0; text-align: center;">
+            <a href="/" class="button">← Back to Scout TDL</a>
+        </div>
+    </div>
+
+    <script>
+        // Copy-to-clipboard on click
+        document.querySelectorAll('.code-block').forEach(block => {
+            block.style.cursor = 'pointer';
+            block.addEventListener('click', function() {
+                const text = this.textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    const original = this.textContent;
+                    this.textContent = '✅ Copied!';
+                    setTimeout(() => {
+                        this.textContent = original;
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
