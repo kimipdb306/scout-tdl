@@ -4,19 +4,9 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.0"
-      - key: SECRET_KEY
-        fromFile: SECRET_KEY
-      - key: TEAMS_CLIENT_ID
-        fromFile: TEAMS_CLIENT_ID
-      - key: TEAMS_CLIENT_SECRET
-        fromFile: TEAMS_CLIENT_SECRET
-      - key: TEAMS_TENANT_ID
-        fromFile: TEAMS_TENANT_ID
-      - key: SCOUT_EMAIL
-        value: "jeffriesr27@darden.virginia.edu"
-      - key: SCOUT_ALT_EMAIL
-        value: "dsn9zx@darden.virginia.edu"
+      - key: FLASK_ENV
+        value: "production"
