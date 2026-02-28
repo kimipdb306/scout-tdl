@@ -3,7 +3,7 @@
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from kanban_db import KanbanBoard, Status, Priority
-from calendar_sync_teams import TeamsCalendarSync
+from calendar_sync_outlook import OutlookCalendarSync
 from calendar_sync_google import GoogleCalendarSync
 from calendar_sync_ical import iCalSync
 import json
@@ -23,10 +23,8 @@ boards = {
 }
 
 # Calendar sync instances
-teams_sync = TeamsCalendarSync(
-    client_id=os.environ.get("TEAMS_CLIENT_ID", ""),
-    client_secret=os.environ.get("TEAMS_CLIENT_SECRET", ""),
-    tenant_id=os.environ.get("TEAMS_TENANT_ID", "common")
+outlook_sync = OutlookCalendarSync(
+    scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu")
 )
 google_sync = GoogleCalendarSync(
     scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu"),
@@ -72,7 +70,7 @@ def create_item(user):
     
     # Sync to calendars if due_date is set
     if item.due_date:
-        teams_sync.add_event(item, user)
+        outlook_sync.add_event(item, user)
         google_sync.add_event(item, user)
         ical_sync.add_event(item, user)
     
@@ -105,11 +103,11 @@ def update_item(user, item_id):
         # Sync calendar changes
         if "due_date" in data or "status" in data:
             if item.status == Status.DONE:
-                teams_sync.remove_event(item_id)
+                outlook_sync.remove_event(item_id)
                 google_sync.remove_event(item_id)
                 ical_sync.remove_event(item_id)
             else:
-                teams_sync.update_event(item, user)
+                outlook_sync.update_event(item, user)
                 google_sync.update_event(item, user)
                 ical_sync.update_event(item, user)
         
@@ -125,7 +123,7 @@ def delete_item(user, item_id):
         return jsonify({"error": "User not found"}), 404
     
     board.delete_item(item_id)
-    teams_sync.remove_event(item_id)
+    outlook_sync.remove_event(item_id)
     google_sync.remove_event(item_id)
     ical_sync.remove_event(item_id)
     return jsonify({"ok": True})
@@ -145,7 +143,7 @@ def move_item(user, item_id):
         
         # Sync completed items
         if new_status == Status.DONE:
-            teams_sync.remove_event(item_id)
+            outlook_sync.remove_event(item_id)
             google_sync.remove_event(item_id)
             ical_sync.remove_event(item_id)
         
@@ -205,16 +203,16 @@ def get_history_stats(user):
     
     return jsonify(board.get_completion_stats())
 
-# Teams OAuth routes
-@app.route("/auth/teams/login")
+# Outlook OAuth routes
+@app.route("/auth/outlook/login")
 def teams_login():
     """Initiate Teams OAuth flow."""
-    auth_url, state = teams_sync.get_auth_url()
+    auth_url, state = outlook_sync.get_auth_url()
     session["oauth_state"] = state
     session["user"] = request.args.get("user", "scout")
     return redirect(auth_url)
 
-@app.route("/auth/teams/callback")
+@app.route("/auth/outlook/callback")
 def teams_callback():
     """Handle Teams OAuth callback."""
     user = session.get("user", "scout")
@@ -225,7 +223,7 @@ def teams_callback():
         return jsonify({"error": "State mismatch"}), 400
     
     try:
-        teams_sync.get_token(code, user)
+        outlook_sync.get_token(code, user)
         return redirect("/")
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -240,11 +238,11 @@ def sync_calendars(user):
     try:
         for item in board.items:
             if item.due_date and item.status != Status.DONE:
-                teams_sync.add_event(item, user)
+                outlook_sync.add_event(item, user)
                 google_sync.add_event(item, user)
                 ical_sync.add_event(item, user)
         
-        return jsonify({"ok": True, "message": "Synced to Teams, Google Calendar, and iCal"})
+        return jsonify({"ok": True, "message": "Synced to Outlook, Google Calendar, and iCal"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
