@@ -75,7 +75,8 @@ class KanbanItem:
 
 
 class KanbanBoard:
-    def __init__(self):
+    def __init__(self, user_id: str = "default"):
+        self.user_id = user_id
         self.items: List[KanbanItem] = []
         self.load()
 
