@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scout Kanban</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        h1 { font-size: 28px; font-weight: 600; }
+        .stats { display: flex; gap: 20px; font-size: 14px; }
+        .stat { background: white; padding: 10px 15px; border-radius: 6px; }
+        
+        .board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .column { background: white; border-radius: 8px; padding: 15px; min-height: 600px; }
+        .column-title { font-weight: 600; font-size: 14px; margin-bottom: 15px; text-transform: uppercase; color: #666; }
+        
+        .cards { min-height: 500px; }
+        .card { 
+            background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; 
+            padding: 12px; margin-bottom: 12px; cursor: move; transition: all 0.2s;
+        }
+        .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card.dragging { opacity: 0.5; }
+        .card.drag-over { background: #f9f9f9; border: 2px solid #0066cc; }
+        
+        .card-title { font-weight: 500; font-size: 14px; margin-bottom: 8px; }
+        .card-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; }
+        
+        .priority-badge { 
+            display: inline-block; padding: 2px 8px; border-radius: 3px; font-weight: 500; font-size: 11px;
+        }
+        .priority-low { background: #e8f5e9; color: #2e7d32; }
+        .priority-medium { background: #fff3e0; color: #f57c00; }
+        .priority-high { background: #ffebee; color: #c62828; }
+        .priority-top { background: #f3e5f5; color: #6a1b9a; border: 1px solid #6a1b9a; font-weight: 700; }
+        
+        .due-date { color: #d32f2f; }
+        .due-date.soon { animation: pulse 1s infinite; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px; }
+        .modal-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 5px; }
+        .form-group input, .form-group textarea, .form-group select { 
+            width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: #0066cc; color: white; }
+        .btn-primary:hover { background: #0052a3; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-danger { background: #d32f2f; color: white; }
+        .btn-sync { background: #4caf50; color: white; }
+        
+        .action-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+        
+        @keyframes pulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Scout Kanban</h1>
+            <div class="stats">
+                <div class="stat">To Do: <strong id="todo-count">0</strong></div>
+                <div class="stat">In Progress: <strong id="in-progress-count">0</strong></div>
+                <div class="stat">Review: <strong id="review-count">0</strong></div>
+                <div class="stat">Done: <strong id="done-count">0</strong></div>
+            </div>
+        </header>
+
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="openNewItemModal()">+ New Item</button>
+            <button class="btn btn-sync" onclick="syncCalendars()">📅 Sync Calendars</button>
+            <button class="btn btn-secondary" id="board-btn" onclick="switchView('board')">Board</button>
+            <button class="btn btn-secondary" id="history-btn" onclick="switchView('history')">📋 TDL History</button>
+        </div>
+
+        <div id="board-view" class="board">
+            <div class="column" id="todo-column">
+                <div class="column-title">To Do</div>
+                <div class="cards" data-status="todo" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+            </div>
+
+            <div class="column" id="in-progress-column">
+                <div class="column-title">In Progress</div>
+                <div class="cards" data-status="in_progress" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+            </div>
+
+            <div class="column" id="review-column">
+                <div class="column-title">Review</div>
+                <div class="cards" data-status="review" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+            </div>
+
+            <div class="column" id="done-column">
+                <div class="column-title">Done</div>
+                <div class="cards" data-status="done" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></div>
+            </div>
+        </div>
+
+        <div id="history-view" style="display: none;">
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <input type="date" id="historyStartDate" placeholder="From date">
+                <input type="date" id="historyEndDate" placeholder="To date">
+                <button class="btn btn-secondary" onclick="filterHistory()">Filter</button>
+                <button class="btn btn-secondary" onclick="loadHistory()">Reset</button>
+            </div>
+            <div id="history-stats" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <h3>📊 Completion Stats</h3>
+                <div id="stats-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 10px;"></div>
+            </div>
+            <div id="history-list" style="background: white; padding: 15px; border-radius: 8px;"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">New Item</div>
+            <form onsubmit="handleSaveItem(event)">
+                <div class="form-group">
+                    <label>Title *</label>
+                    <input type="text" id="itemTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="itemDescription"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="itemPriority">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM" selected>Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="TOP_PRIORITY">Top Priority</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" id="itemDueDate">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let items = {};
+        let draggedItem = null;
+        let currentView = 'board';
+
+        async function loadItems() {
+            const res = await fetch('/api/items');
+            const data = await res.json();
+            items = data;
+            renderBoard();
+            updateStats();
+        }
+
+        function renderBoard() {
+            ['todo', 'in_progress', 'review', 'done'].forEach(status => {
+                const column = document.querySelector(`[data-status="${status}"]`);
+                column.innerHTML = '';
+                (items[status] || []).forEach(item => {
+                    const card = createCard(item);
+                    column.appendChild(card);
+                });
+            });
+        }
+
+        function createCard(item) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.draggable = true;
+            card.id = item.id;
+            
+            const priorityClass = `priority-${item.priority.toLowerCase().replace('_', '-')}`;
+            const daysUntil = item.due_date ? Math.ceil((new Date(item.due_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+            const isDueSoon = daysUntil !== null && daysUntil <= 3 && daysUntil >= 0;
+            
+            card.innerHTML = `
+                <div class="card-title">${item.title}</div>
+                <div class="card-meta">
+                    <span class="priority-badge ${priorityClass}">${item.priority}</span>
+                    ${item.due_date ? `<span class="due-date ${isDueSoon ? 'soon' : ''}">${daysUntil} days</span>` : ''}
+                </div>
+            `;
+            
+            card.ondragstart = (e) => { draggedItem = item; e.target.classList.add('dragging'); };
+            card.ondragend = (e) => { e.target.classList.remove('dragging'); };
+            card.ondblclick = () => openEditItemModal(item);
+            
+            return card;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const newStatus = e.currentTarget.dataset.status;
+            if (draggedItem) {
+                await fetch(`/api/items/${draggedItem.id}/move`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                loadItems();
+            }
+        }
+
+        function openNewItemModal() {
+            document.getElementById('modalTitle').textContent = 'New Item';
+            document.getElementById('itemTitle').value = '';
+            document.getElementById('itemDescription').value = '';
+            document.getElementById('itemPriority').value = 'MEDIUM';
+            document.getElementById('itemDueDate').value = '';
+            document.getElementById('itemModal').classList.add('active');
+            document.getElementById('itemTitle').focus();
+        }
+
+        function openEditItemModal(item) {
+            document.getElementById('modalTitle').textContent = `Edit: ${item.title}`;
+            document.getElementById('itemTitle').value = item.title;
+            document.getElementById('itemDescription').value = item.description;
+            document.getElementById('itemPriority').value = item.priority;
+            document.getElementById('itemDueDate').value = item.due_date || '';
+            document.getElementById('itemModal').dataset.editId = item.id;
+            document.getElementById('itemModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('itemModal').classList.remove('active');
+            delete document.getElementById('itemModal').dataset.editId;
+        }
+
+        async function handleSaveItem(e) {
+            e.preventDefault();
+            const editId = document.getElementById('itemModal').dataset.editId;
+            const payload = {
+                title: document.getElementById('itemTitle').value,
+                description: document.getElementById('itemDescription').value,
+                priority: document.getElementById('itemPriority').value,
+                due_date: document.getElementById('itemDueDate').value || null,
+            };
+
+            if (editId) {
+                await fetch(`/api/items/${editId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                await fetch('/api/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            }
+            
+            closeModal();
+            loadItems();
+        }
+
+        async function updateStats() {
+            const stats = await fetch('/api/stats').then(r => r.json());
+            document.getElementById('todo-count').textContent = stats.todo_count;
+            document.getElementById('in-progress-count').textContent = stats.in_progress_count;
+            document.getElementById('review-count').textContent = stats.review_count;
+            document.getElementById('done-count').textContent = stats.done_count;
+        }
+
+        async function syncCalendars() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Syncing...';
+            const res = await fetch('/api/sync', { method: 'POST' });
+            const data = await res.json();
+            alert(data.message || data.error);
+            btn.disabled = false;
+            btn.textContent = '📅 Sync Calendars';
+        }
+
+        function switchView(view) {
+            currentView = view;
+            document.getElementById('board-view').style.display = view === 'board' ? 'grid' : 'none';
+            document.getElementById('history-view').style.display = view === 'history' ? 'block' : 'none';
+            document.getElementById('board-btn').style.opacity = view === 'board' ? '1' : '0.5';
+            document.getElementById('history-btn').style.opacity = view === 'history' ? '1' : '0.5';
+            
+            if (view === 'history') {
+                loadHistory();
+            }
+        }
+
+        async function loadHistory() {
+            const res = await fetch('/api/history');
+            const data = await res.json();
+            
+            // Render stats
+            const statsHtml = Object.entries(data.stats).map(([key, value]) => {
+                if (key === 'by_priority') {
+                    return `<div><strong>By Priority:</strong><br>${Object.entries(value).map(([p, c]) => `${p}: ${c}`).join(', ')}</div>`;
+                }
+                return `<div><strong>${key.replace(/_/g, ' ')}:</strong> ${value}</div>`;
+            }).join('');
+            document.getElementById('stats-content').innerHTML = statsHtml;
+            
+            // Render history list
+            const historyHtml = data.items.map(item => {
+                const completed = new Date(item.completed_at);
+                const daysAgo = Math.floor((new Date() - completed) / (1000 * 60 * 60 * 24));
+                const timeStr = item.time_to_complete ? `${(item.time_to_complete / 3600).toFixed(1)}h` : '?';
+                
+                return `
+                    <div style="border: 1px solid #e0e0e0; padding: 12px; margin-bottom: 10px; border-radius: 6px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <strong>${item.title}</strong>
+                            <span style="font-size: 12px; color: #999;">${daysAgo}d ago</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; font-size: 12px;">
+                            <span class="priority-badge priority-${item.priority.toLowerCase().replace('_', '-')}">${item.priority}</span>
+                            <span style="color: #666;">Completed in: <strong>${timeStr}</strong></span>
+                            <span style="color: #666;">Due: ${item.due_date || 'N/A'}</span>
+                        </div>
+                        ${item.description ? `<p style="margin-top: 8px; font-size: 13px; color: #666;">${item.description}</p>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('history-list').innerHTML = historyHtml || '<p style="color: #999;">No completed items yet</p>';
+        }
+
+        function filterHistory() {
+            const start = document.getElementById('historyStartDate').value;
+            const end = document.getElementById('historyEndDate').value;
+            if (!start || !end) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            fetch(`/api/history?start_date=${start}&end_date=${end}`)
+                .then(r => r.json())
+                .then(data => {
+                    const statsHtml = Object.entries(data.stats).map(([key, value]) => {
+                        if (key === 'by_priority') {
+                            return `<div><strong>By Priority:</strong><br>${Object.entries(value).map(([p, c]) => `${p}: ${c}`).join(', ')}</div>`;
+                        }
+                        return `<div><strong>${key.replace(/_/g, ' ')}:</strong> ${value}</div>`;
+                    }).join('');
+                    document.getElementById('stats-content').innerHTML = statsHtml;
+                    
+                    const historyHtml = data.items.map(item => {
+                        const completed = new Date(item.completed_at);
+                        const timeStr = item.time_to_complete ? `${(item.time_to_complete / 3600).toFixed(1)}h` : '?';
+                        return `
+                            <div style="border: 1px solid #e0e0e0; padding: 12px; margin-bottom: 10px; border-radius: 6px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <strong>${item.title}</strong>
+                                    <span style="font-size: 12px; color: #999;">${item.completed_at.split('T')[0]}</span>
+                                </div>
+                                <div style="display: flex; gap: 10px; font-size: 12px;">
+                                    <span class="priority-badge priority-${item.priority.toLowerCase().replace('_', '-')}">${item.priority}</span>
+                                    <span style="color: #666;">Completed in: <strong>${timeStr}</strong></span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    document.getElementById('history-list').innerHTML = historyHtml || '<p style="color: #999;">No items in this date range</p>';
+                });
+        }
+
+        // Load on page load
+        loadItems();
+        setInterval(loadItems, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>
