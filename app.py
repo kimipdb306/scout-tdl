@@ -7,7 +7,7 @@ No manual buttons needed.
 from flask import Flask, render_template, request, jsonify
 from kanban_db import KanbanBoard, Status, Priority
 from calendar_sync_outlook import OutlookCalendarSync
-from calendar_sync_google import GoogleCalendarSync
+from calendar_sync_google_oauth import GoogleCalendarSyncOAuth
 from calendar_sync_apple import AppleCalendarSync
 from calendar_sync_ical import iCalSync
 from calendar_sync_auto import AutoCalendarSync
@@ -30,9 +30,8 @@ boards = {
 outlook_sync = OutlookCalendarSync(
     scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu")
 )
-google_sync = GoogleCalendarSync(
-    scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu"),
-    scout_alt_email=os.environ.get("SCOUT_ALT_EMAIL", "dsn9zx@darden.virginia.edu")
+google_sync = GoogleCalendarSyncOAuth(
+    scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu")
 )
 apple_sync = AppleCalendarSync()
 ical_sync = iCalSync()
