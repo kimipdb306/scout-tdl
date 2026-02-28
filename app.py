@@ -1,28 +1,32 @@
 #!/usr/bin/env python3
-"""Scout TDL - Kanban board with multi-user support and calendar sync."""
+"""Scout TDL - Automatic Calendar Sync Edition
+Every task change automatically syncs to Outlook, Google, Apple, and iCal.
+No manual buttons needed.
+"""
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify
 from kanban_db import KanbanBoard, Status, Priority
 from calendar_sync_outlook import OutlookCalendarSync
 from calendar_sync_google import GoogleCalendarSync
+from calendar_sync_apple import AppleCalendarSync
 from calendar_sync_ical import iCalSync
+from calendar_sync_auto import AutoCalendarSync
 import json
 from pathlib import Path
 import os
-from datetime import datetime, timedelta
-import uuid
+from datetime import datetime
 
 _app_dir = Path(__file__).parent
 app = Flask(__name__, template_folder=str(_app_dir / "templates"), static_folder=str(_app_dir / "static"))
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
 
-# User boards (Scout and Reid)
+# User boards
 boards = {
     "scout": KanbanBoard("scout"),
     "reid": KanbanBoard("reid")
 }
 
-# Calendar sync instances
+# Initialize calendar sync services
 outlook_sync = OutlookCalendarSync(
     scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu")
 )
@@ -30,7 +34,17 @@ google_sync = GoogleCalendarSync(
     scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu"),
     scout_alt_email=os.environ.get("SCOUT_ALT_EMAIL", "dsn9zx@darden.virginia.edu")
 )
+apple_sync = AppleCalendarSync()
 ical_sync = iCalSync()
+
+# Auto-sync service (syncs to all calendars automatically)
+auto_sync = AutoCalendarSync(
+    outlook_sync=outlook_sync,
+    google_sync=google_sync,
+    apple_sync=apple_sync,
+    ical_sync=ical_sync
+)
+auto_sync.enable_auto_sync()
 
 # Routes
 @app.route("/")
@@ -38,7 +52,7 @@ def index():
     """Serve kanban board UI."""
     return render_template("index.html")
 
-# Multi-user API endpoints
+# Multi-user API endpoints with AUTOMATIC SYNC
 @app.route("/api/<user>/items", methods=["GET"])
 def get_items(user):
     """Get all items for a user grouped by status."""
@@ -55,7 +69,7 @@ def get_items(user):
 
 @app.route("/api/<user>/items", methods=["POST"])
 def create_item(user):
-    """Create new item for user."""
+    """Create new item for user - AUTO-SYNCS to all calendars."""
     board = boards.get(user)
     if not board:
         return jsonify({"error": "User not found"}), 404
@@ -68,11 +82,9 @@ def create_item(user):
         description=data.get("description", "")
     )
     
-    # Sync to calendars if due_date is set
+    # AUTO-SYNC: Send to all calendars in background
     if item.due_date:
-        outlook_sync.add_event(item, user)
-        google_sync.add_event(item, user)
-        ical_sync.add_event(item, user)
+        auto_sync.add_item_to_all_calendars(item, user)
     
     return jsonify(item.to_dict()), 201
 
@@ -90,7 +102,7 @@ def get_item(user, item_id):
 
 @app.route("/api/<user>/items/<item_id>", methods=["PUT"])
 def update_item(user, item_id):
-    """Update item."""
+    """Update item - AUTO-SYNCS to all calendars."""
     board = boards.get(user)
     if not board:
         return jsonify({"error": "User not found"}), 404
@@ -100,16 +112,14 @@ def update_item(user, item_id):
         board.update_item(item_id, **data)
         item = board.get_item(item_id)
         
-        # Sync calendar changes
-        if "due_date" in data or "status" in data:
+        # AUTO-SYNC: Update on all calendars if due_date or status changed
+        if item.due_date:
             if item.status == Status.DONE:
-                outlook_sync.remove_event(item_id)
-                google_sync.remove_event(item_id)
-                ical_sync.remove_event(item_id)
+                # Remove from calendars when completed
+                auto_sync.remove_item_from_all_calendars(item_id)
             else:
-                outlook_sync.update_event(item, user)
-                google_sync.update_event(item, user)
-                ical_sync.update_event(item, user)
+                # Update on all calendars
+                auto_sync.update_item_on_all_calendars(item, user)
         
         return jsonify(item.to_dict())
     except ValueError as e:
@@ -117,20 +127,21 @@ def update_item(user, item_id):
 
 @app.route("/api/<user>/items/<item_id>", methods=["DELETE"])
 def delete_item(user, item_id):
-    """Delete item."""
+    """Delete item - AUTO-REMOVES from all calendars."""
     board = boards.get(user)
     if not board:
         return jsonify({"error": "User not found"}), 404
     
     board.delete_item(item_id)
-    outlook_sync.remove_event(item_id)
-    google_sync.remove_event(item_id)
-    ical_sync.remove_event(item_id)
+    
+    # AUTO-SYNC: Remove from all calendars
+    auto_sync.remove_item_from_all_calendars(item_id)
+    
     return jsonify({"ok": True})
 
 @app.route("/api/<user>/items/<item_id>/move", methods=["POST"])
 def move_item(user, item_id):
-    """Move item to new status."""
+    """Move item to new status - AUTO-SYNCS completion."""
     board = boards.get(user)
     if not board:
         return jsonify({"error": "User not found"}), 404
@@ -141,11 +152,12 @@ def move_item(user, item_id):
         board.move_item(item_id, new_status)
         item = board.get_item(item_id)
         
-        # Sync completed items
+        # AUTO-SYNC: Remove from calendars when marked done
         if new_status == Status.DONE:
-            outlook_sync.remove_event(item_id)
-            google_sync.remove_event(item_id)
-            ical_sync.remove_event(item_id)
+            auto_sync.remove_item_from_all_calendars(item_id)
+        elif item.due_date:
+            # Update status on calendars
+            auto_sync.update_item_on_all_calendars(item, user)
         
         return jsonify(item.to_dict())
     except ValueError as e:
@@ -203,51 +215,21 @@ def get_history_stats(user):
     
     return jsonify(board.get_completion_stats())
 
-# Outlook OAuth routes
-@app.route("/auth/outlook/login")
-def teams_login():
-    """Initiate Teams OAuth flow."""
-    auth_url, state = outlook_sync.get_auth_url()
-    session["oauth_state"] = state
-    session["user"] = request.args.get("user", "scout")
-    return redirect(auth_url)
-
-@app.route("/auth/outlook/callback")
-def teams_callback():
-    """Handle Teams OAuth callback."""
-    user = session.get("user", "scout")
-    code = request.args.get("code")
-    state = request.args.get("state")
-    
-    if state != session.get("oauth_state"):
-        return jsonify({"error": "State mismatch"}), 400
-    
-    try:
-        outlook_sync.get_token(code, user)
-        return redirect("/")
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/<user>/calendars/sync", methods=["POST"])
-def sync_calendars(user):
-    """Manually sync to all calendars."""
-    board = boards.get(user)
-    if not board:
-        return jsonify({"error": "User not found"}), 404
-    
-    try:
-        for item in board.items:
-            if item.due_date and item.status != Status.DONE:
-                outlook_sync.add_event(item, user)
-                google_sync.add_event(item, user)
-                ical_sync.add_event(item, user)
-        
-        return jsonify({"ok": True, "message": "Synced to Outlook, Google Calendar, and iCal"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+@app.route("/api/sync-status", methods=["GET"])
+def sync_status():
+    """Get auto-sync status."""
+    return jsonify({
+        "auto_sync_enabled": auto_sync.sync_enabled,
+        "calendars_syncing_to": [
+            "Outlook" if outlook_sync else None,
+            "Google Calendar" if google_sync else None,
+            "Apple Calendar" if apple_sync else None,
+            "iCal (.ics files)" if ical_sync else None,
+        ],
+        "message": "All tasks automatically sync to connected calendars. No manual action needed."
+    })
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5555))
     debug = os.environ.get("FLASK_ENV") == "development"
     app.run(debug=debug, port=port, host="0.0.0.0")

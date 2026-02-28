@@ -81,10 +81,9 @@
 
         <div class="action-bar">
             <button class="btn btn-primary" onclick="openNewItemModal()">+ New Item</button>
-            <button class="btn btn-sync" onclick="syncCalendars()">📅 Sync Calendars</button>
-            <button class="btn btn-sync" onclick="connectOutlook()" id="outlook-btn">🔗 Connect Outlook</button>
             <button class="btn btn-secondary" id="board-btn" onclick="switchView('board')">Board</button>
             <button class="btn btn-secondary" id="history-btn" onclick="switchView('history')">📋 TDL History</button>
+            <div style="font-size: 12px; color: #666; margin-left: auto; padding: 10px;">✅ Auto-syncing to Outlook, Google, Apple, iCal</div>
         </div>
 
         <div id="board-view" class="board">
@@ -289,26 +288,6 @@
             document.getElementById('in-progress-count').textContent = stats.in_progress_count;
             document.getElementById('review-count').textContent = stats.review_count;
             document.getElementById('done-count').textContent = stats.done_count;
-        }
-
-        async function syncCalendars() {
-            const btn = event.target;
-            btn.disabled = true;
-            btn.textContent = 'Syncing...';
-            const res = await fetch('/api/sync', { method: 'POST' });
-            const data = await res.json();
-            alert(data.message || data.error);
-            btn.disabled = false;
-            btn.textContent = '📅 Sync Calendars';
-        }
-
-        async function connectOutlook() {
-            const btn = document.getElementById('outlook-btn');
-            btn.disabled = true;
-            btn.textContent = 'Connecting...';
-            
-            // Redirect to Outlook OAuth
-            window.location.href = '/auth/outlook/login';
         }
 
         function switchView(view) {
