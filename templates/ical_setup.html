@@ -24,23 +24,20 @@
 <body>
     <div class="container">
         <h1>🗓️ Scout TDL - Calendar Setup</h1>
-        <p class="subtitle">Your tasks sync instantly to Google Calendar + iCal feeds.</p>
+        <p class="subtitle">Your tasks automatically export to iCal feeds that you can subscribe to in any calendar app.</p>
         
         <div class="info-box">
-            ✅ <strong>How it works:</strong> Scout TDL automatically syncs to Google Calendar (instant) and exports iCal feeds (every 15 min) that you can subscribe to in Outlook, Apple Calendar, or Teams. Choose your setup below.
+            ✅ <strong>How it works:</strong> Scout TDL automatically updates iCal feeds every time you create, edit, or complete a task. Subscribe to the iCal feeds below in Outlook, Google Calendar, Apple Calendar, or Teams, and they'll automatically refresh every ~15 minutes.
         </div>
 
-        <!-- Google Calendar (Recommended) -->
         <div class="setup-section">
-            <h2>🚀 Google Calendar (Recommended - Instant Sync)</h2>
-            <ol class="steps">
-                <li>Create a task in Scout TDL with a due date</li>
-                <li>You'll see a one-time Google authentication prompt</li>
-                <li>Sign in with your Google account (jeffriesr27@darden.virginia.edu or dsn9zx@darden.virginia.edu)</li>
-                <li>Click "Allow" to grant Scout TDL access to your calendar</li>
-                <li>Done! All future tasks sync instantly to Google Calendar</li>
-            </ol>
-            <p style="margin-top: 15px; color: #0066cc;"><strong>✨ Tasks appear in Google Calendar within seconds of creation</strong></p>
+            <h2>📋 Your iCal Feed URLs</h2>
+            <p>Use these exact URLs in your calendar apps:</p>
+            <p><strong>Scout's Tasks:</strong></p>
+            <div class="code-block">https://kanban-board-ypy2.onrender.com/api/scout/calendar.ics</div>
+            <p style="margin-top: 15px;"><strong>Reid's Tasks:</strong></p>
+            <div class="code-block">https://kanban-board-ypy2.onrender.com/api/reid/calendar.ics</div>
+            <p style="margin-top: 15px; font-size: 13px; color: #666;"><em>Updates are automatic — every task change updates the .ics file. Most calendar apps refresh every 15 minutes.</em></p>
         </div>
 
         <!-- Outlook / Microsoft 365 (via iCal) -->
@@ -58,18 +55,7 @@
             <p style="margin-top: 10px; font-size: 13px; color: #666;"><em>Note: Updates are not instant (polling-based). For real-time sync, use Google Calendar method above.</em></p>
         </div>
 
-        <!-- Outlook via Google Calendar (Best) -->
-        <div class="setup-section">
-            <h2>🔗 Outlook + Google Calendar (Instant - Recommended)</h2>
-            <ol class="steps">
-                <li><strong>First:</strong> Set up Google Calendar (see "Google Calendar" section above)</li>
-                <li>In Outlook, click <strong>"Add calendar"</strong> → <strong>"From the web"</strong></li>
-                <li>Paste your Google Calendar URL (you can find it in Google Calendar settings)</li>
-                <li>Click <strong>"Import"</strong></li>
-                <li>Scout TDL appears in Outlook with instant updates (synced through Google)</li>
-            </ol>
-            <p style="margin-top: 10px; font-size: 13px; color: #0066cc;"><strong>✨ This gives you real-time sync in Outlook + Teams</strong></p>
-        </div>
+
 
         <!-- Google Calendar -->
         <div class="setup-section">
@@ -82,7 +68,7 @@
                     <div class="code-block" id="google-url">https://kanban-board-ypy2.onrender.com/api/scout/calendar.ics</div>
                 </li>
                 <li>Click <strong>"Subscribe"</strong></li>
-                <li>Scout TDL appears as a calendar on the left</li>
+                <li>Scout TDL calendar appears on the left (updates every ~15 minutes)</li>
             </ol>
         </div>
 
@@ -112,32 +98,18 @@
             </ol>
         </div>
 
-        <!-- Your iCal URLs -->
-        <div class="setup-section">
-            <h2>📋 Your iCal Feed URLs</h2>
-            <p>Use these exact URLs in your calendar apps:</p>
-            <p><strong>Scout's Tasks:</strong></p>
-            <div class="code-block">https://kanban-board-ypy2.onrender.com/api/scout/calendar.ics</div>
-            <p style="margin-top: 15px;"><strong>Reid's Tasks:</strong></p>
-            <div class="code-block">https://kanban-board-ypy2.onrender.com/api/reid/calendar.ics</div>
-        </div>
+
 
         <!-- How Updates Work -->
         <div class="setup-section">
             <h2>⚡ How Updates Work</h2>
-            <h3 style="margin-top: 15px; color: #0066cc;">Google Calendar (Instant)</h3>
             <ul style="margin-left: 20px; line-height: 1.8;">
-                <li><strong>Create a task:</strong> Appears in Google Calendar within seconds</li>
-                <li><strong>Edit a task:</strong> Updates in Google Calendar within seconds</li>
-                <li><strong>Complete a task:</strong> Automatically removed from Google Calendar</li>
+                <li><strong>Create a task:</strong> Exported to .ics file immediately</li>
+                <li><strong>Edit a task:</strong> Updated in .ics file immediately</li>
+                <li><strong>Complete a task:</strong> Removed from .ics file immediately</li>
+                <li><strong>Calendar refresh:</strong> Your calendar app polls the .ics every ~15 minutes (Outlook, Google, Apple all support this)</li>
             </ul>
-            <h3 style="margin-top: 15px; color: #666;">iCal Feed (Polling-based)</h3>
-            <ul style="margin-left: 20px; line-height: 1.8;">
-                <li><strong>Create a task:</strong> Appears in subscribed calendars within 1-15 minutes</li>
-                <li><strong>Edit a task:</strong> Updates in subscribed calendars within 1-15 minutes</li>
-                <li><strong>Complete a task:</strong> Removed from subscribed calendars within 1-15 minutes</li>
-                <li><strong>Manual refresh:</strong> Most calendar apps (Outlook, Apple) check every 15 minutes</li>
-            </ul>
+            <p style="margin-top: 15px; font-size: 13px; color: #666;"><em>The .ics file updates instantly when you make changes. Your calendar app checks for updates every 15 minutes. To see changes faster, manually refresh your calendar app.</em></p>
         </div>
 
         <!-- Back to TDL -->

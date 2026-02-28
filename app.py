@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Scout TDL - Automatic Calendar Sync Edition
-Every task change automatically syncs to Outlook, Google, Apple, and iCal.
-No manual buttons needed.
+"""Scout TDL - Automatic iCal Calendar Sync
+Every task change automatically exports to .ics files.
+Subscribe in Outlook, Google, Apple, or Teams.
 """
 
 from flask import Flask, render_template, request, jsonify
 from kanban_db import KanbanBoard, Status, Priority
-from calendar_sync_google_oauth import GoogleCalendarSyncOAuth
 from calendar_sync_ical import iCalSync
 from calendar_sync_auto import AutoCalendarSync
 import json
@@ -25,16 +24,13 @@ boards = {
     "reid": KanbanBoard("reid")
 }
 
-# Initialize calendar sync services
-google_sync = GoogleCalendarSyncOAuth(
-    scout_email=os.environ.get("SCOUT_EMAIL", "jeffriesr27@darden.virginia.edu")
-)
+# Initialize calendar sync
 ical_sync = iCalSync()
 
-# Auto-sync service (syncs to both Google Calendar + iCal)
+# Auto-sync service (syncs to iCal feeds)
 auto_sync = AutoCalendarSync(
     outlook_sync=None,
-    google_sync=google_sync,
+    google_sync=None,
     apple_sync=None,
     ical_sync=ical_sync
 )
@@ -48,7 +44,7 @@ def index():
 
 @app.route("/setup")
 def setup():
-    """Serve iCal setup instructions."""
+    """Serve calendar setup instructions."""
     return render_template("ical_setup.html")
 
 # Multi-user API endpoints with AUTOMATIC SYNC
@@ -68,7 +64,7 @@ def get_items(user):
 
 @app.route("/api/<user>/items", methods=["POST"])
 def create_item(user):
-    """Create new item for user - AUTO-SYNCS to all calendars."""
+    """Create new item for user - AUTO-SYNCS to iCal."""
     board = boards.get(user)
     if not board:
         return jsonify({"error": "User not found"}), 404
@@ -81,7 +77,7 @@ def create_item(user):
         description=data.get("description", "")
     )
     
-    # AUTO-SYNC: Send to all calendars in background
+    # AUTO-SYNC: Add to iCal
     if item.due_date:
         auto_sync.add_item_to_all_calendars(item, user)
     
@@ -101,7 +97,7 @@ def get_item(user, item_id):
 
 @app.route("/api/<user>/items/<item_id>", methods=["PUT"])
 def update_item(user, item_id):
-    """Update item - AUTO-SYNCS to all calendars."""
+    """Update item - AUTO-SYNCS to iCal."""
     board = boards.get(user)
     if not board:
         return jsonify({"error": "User not found"}), 404
@@ -111,13 +107,11 @@ def update_item(user, item_id):
         board.update_item(item_id, **data)
         item = board.get_item(item_id)
         
-        # AUTO-SYNC: Update on all calendars if due_date or status changed
+        # AUTO-SYNC: Update on iCal
         if item.due_date:
             if item.status == Status.DONE:
-                # Remove from calendars when completed
                 auto_sync.remove_item_from_all_calendars(item_id)
             else:
-                # Update on all calendars
                 auto_sync.update_item_on_all_calendars(item, user)
         
         return jsonify(item.to_dict())
@@ -126,21 +120,19 @@ def update_item(user, item_id):
 
 @app.route("/api/<user>/items/<item_id>", methods=["DELETE"])
 def delete_item(user, item_id):
-    """Delete item - AUTO-REMOVES from all calendars."""
+    """Delete item - AUTO-REMOVES from iCal."""
     board = boards.get(user)
     if not board:
         return jsonify({"error": "User not found"}), 404
     
     board.delete_item(item_id)
-    
-    # AUTO-SYNC: Remove from all calendars
     auto_sync.remove_item_from_all_calendars(item_id)
     
     return jsonify({"ok": True})
 
 @app.route("/api/<user>/items/<item_id>/move", methods=["POST"])
 def move_item(user, item_id):
-    """Move item to new status - AUTO-SYNCS completion."""
+    """Move item to new status - AUTO-SYNCS."""
     board = boards.get(user)
     if not board:
         return jsonify({"error": "User not found"}), 404
@@ -151,11 +143,10 @@ def move_item(user, item_id):
         board.move_item(item_id, new_status)
         item = board.get_item(item_id)
         
-        # AUTO-SYNC: Remove from calendars when marked done
+        # AUTO-SYNC: Remove from iCal when done
         if new_status == Status.DONE:
             auto_sync.remove_item_from_all_calendars(item_id)
         elif item.due_date:
-            # Update status on calendars
             auto_sync.update_item_on_all_calendars(item, user)
         
         return jsonify(item.to_dict())
@@ -214,18 +205,6 @@ def get_history_stats(user):
     
     return jsonify(board.get_completion_stats())
 
-@app.route("/api/sync-status", methods=["GET"])
-def sync_status():
-    """Get auto-sync status."""
-    return jsonify({
-        "auto_sync_enabled": auto_sync.sync_enabled,
-        "calendars_syncing_to": [
-            "Google Calendar (instant sync)" if google_sync else None,
-            "iCal (.ics feeds for subscriptions)" if ical_sync else None,
-        ],
-        "message": "Tasks sync instantly to Google Calendar + iCal feeds for Outlook/Apple/Teams subscriptions."
-    })
-
 @app.route("/api/<user>/calendar.ics", methods=["GET"])
 def get_ical_feed(user):
     """Serve iCal feed for subscription."""
@@ -262,6 +241,15 @@ def get_ical_feed(user):
             cal.add_component(event)
     
     return cal.to_ical(), 200, {'Content-Type': 'text/calendar'}
+
+@app.route("/api/sync-status", methods=["GET"])
+def sync_status():
+    """Get auto-sync status."""
+    return jsonify({
+        "auto_sync_enabled": auto_sync.sync_enabled,
+        "calendars": "iCal (.ics feeds for Outlook, Google, Apple, Teams)",
+        "message": "All tasks automatically export to iCal. Subscribe in your calendar app."
+    })
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5555))
