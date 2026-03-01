@@ -1,6 +1,5 @@
 __pycache__/
 *.pyc
-kanban_data.json
 kanban.log
 ngrok.log
 public_url.txt
